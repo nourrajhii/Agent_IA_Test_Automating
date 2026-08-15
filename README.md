@@ -74,12 +74,6 @@ SCENARIO_GEN_CONCURRENCY=2     # générations LLM en parallèle
 VITE_API_URL=http://localhost:8000   # remplacer par l'IP/domaine en déploiement distant
 ```
 
-**Points notables du setup** :
-- Le backend attend qu'Ollama soit `healthy` *et* qu'`ollama-init` ait fini de puller les modèles avant de démarrer (`depends_on: condition: service_completed_successfully`)
-- Healthcheck Ollama basé sur `ollama list` (le binaire de l'image), pas `curl`/`wget` — non garantis dans l'image `ollama/ollama`
-- `shm_size: 2gb` sur le backend : Chrome headless a besoin de plus que les 64 Mo de `/dev/shm` par défaut, sinon il peut crasher sur des pages lourdes
-- `reports/`, `screenshots/`, `uploads/` sont montés en volumes pour persister entre redémarrages
-- GPU NVIDIA : bloc `deploy.resources.reservations.devices` commenté dans le service `ollama`, à activer si `nvidia-container-toolkit` est installé (accélère surtout `llava:7b`)
 
 ## Getting Started (sans Docker)
 
