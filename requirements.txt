@@ -3,5 +3,16 @@ uvicorn[standard]>=0.29.0
 httpx>=0.27.0
 pydantic>=2.0.0
 beautifulsoup4>=4.12.0
-pillow>=10.0.0          
-python-multipart>=0.0.9  
+pillow>=10.0.0
+python-multipart>=0.0.9
+
+# OCR (vision_parser_service)
+pytesseract>=0.3.10
+
+# Automatisation navigateur (live_dom_service, executor_service, driver_service)
+selenium>=4.20.0
+webdriver-manager>=4.0.0
+
+# Orchestration LangGraph (orchestrator_service)
+langgraph>=0.2.0
+langchain-core>=0.3.0

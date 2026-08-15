@@ -15,7 +15,6 @@ import asyncio
 import json
 import os
 
-<<<<<<< HEAD
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -42,22 +41,6 @@ os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 # (script_service.SCREENSHOTS_DIR) pour que le frontend puisse les afficher
 # via <img src={`${API_BASE}/screenshots/xxx.png`}>.
 app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
-=======
-from fastapi import FastAPI, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-
-from app.services.html_parser_service import analyze_html_code
-from app.services.scenario_service import generate_all_scenarios
-from app.services.script_service import generate_selenium_script
-from app.services.executor_service import execute_script
-from app.services.html_server_service import serve_html
-from app.config import UPLOAD_DIR, OLLAMA_BASE_URL, REPORTS_DIR
-
-app = FastAPI(title="Test_Auto — HTML → Selenium Pipeline")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(REPORTS_DIR, exist_ok=True)
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,7 +49,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
 # ── Routeur du pipeline orchestré LangGraph ──────────────────────────────────
 # DOIT être importé/inclus APRÈS la création de `app` ci-dessus, sinon
 # "app is not defined". graph_routes.py expose /generate-stream-graph et
@@ -74,8 +56,6 @@ app.add_middleware(
 from app.graph_routes import router as graph_router
 app.include_router(graph_router)
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 # ── SSE helper ────────────────────────────────────────────────────────────────
 
@@ -83,7 +63,6 @@ def sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-<<<<<<< HEAD
 def _execution_summary(results: list[dict]) -> dict:
     """
     Résumé global façon "EXECUTION SUMMARY" (voir report_service.py),
@@ -115,13 +94,6 @@ def _execution_summary(results: list[dict]) -> dict:
 
 async def pipeline_stream(html_code: str):
     try:
-=======
-# ── Pipeline SSE ──────────────────────────────────────────────────────────────
-
-async def pipeline_stream(html_code: str):
-    try:
-        # ── Étape 1 : Parsing HTML ───────────────────────────────────────────
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
         yield sse("stage", {"stage": "parse", "status": "active"})
 
         analysis = await analyze_html_code(html_code)
@@ -140,13 +112,10 @@ async def pipeline_stream(html_code: str):
                 "elements": [e.dict() for e in analysis.elements],
                 "raw_description": analysis.raw_description,
                 "page_type": analysis.page_type,
+                "site_title": analysis.site_title,
             },
         })
 
-<<<<<<< HEAD
-=======
-        # ── Étape 2 : Génération de TOUS les scénarios ───────────────────────
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
         yield sse("stage", {"stage": "scenario", "status": "active"})
 
         all_scenarios = await generate_all_scenarios(analysis)
@@ -158,7 +127,6 @@ async def pipeline_stream(html_code: str):
             "count": len(all_scenarios.scenarios),
         })
 
-<<<<<<< HEAD
         scenarios = all_scenarios.scenarios
         results: list[dict | None] = [None] * len(scenarios)
         event_queue: asyncio.Queue = asyncio.Queue()
@@ -263,6 +231,7 @@ async def pipeline_stream_vision(image_bytes: bytes, target_url: str | None):
                 "elements": [e.dict() for e in analysis.elements],
                 "raw_description": analysis.raw_description,
                 "page_type": analysis.page_type,
+                "site_title": analysis.site_title,
             },
         })
 
@@ -353,19 +322,15 @@ async def agent_stream(html_code: str):
             "analysis": {
                 "elements": [e.dict() for e in analysis.elements],
                 "page_type": analysis.page_type,
+                "site_title": analysis.site_title,
             },
         })
 
         events: asyncio.Queue = asyncio.Queue()
-=======
-        # ── Étape 3 & 4 : Script + Exécution ─────────────────────────────────
-        results = []
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
         async with serve_html(html_code) as target_url:
             yield sse("server_ready", {"url": target_url})
 
-<<<<<<< HEAD
             agent_task = asyncio.create_task(run_agent(analysis, target_url, events))
 
             while True:
@@ -377,46 +342,6 @@ async def agent_stream(html_code: str):
             await agent_task
 
         yield sse("complete", {"ok": True})
-=======
-            for idx, scenario in enumerate(all_scenarios.scenarios):
-                yield sse("script_start", {
-                    "scenario_index": idx,
-                    "scenario_title": scenario.title,
-                })
-
-                script = await generate_selenium_script(scenario, analysis, target_url)
-
-                yield sse("script_done", {
-                    "scenario_index": idx,
-                    "scenario_title": scenario.title,
-                    "script_code": script.code,
-                })
-
-                yield sse("exec_start", {"scenario_index": idx})
-
-                loop = asyncio.get_event_loop()
-                report = await loop.run_in_executor(None, execute_script, script)
-
-                yield sse("exec_done", {
-                    "scenario_index": idx,
-                    "scenario_title": scenario.title,
-                    "execution_report": report.dict(),
-                })
-
-                results.append({
-                    "scenario": scenario.dict(),
-                    "script_code": script.code,
-                    "execution_report": report.dict(),
-                })
-
-        passed = sum(1 for r in results if r["execution_report"]["success"])
-        yield sse("complete", {
-            "ok": True,
-            "total": len(results),
-            "passed": passed,
-            "failed": len(results) - passed,
-        })
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
     except Exception as e:
         import traceback
@@ -440,7 +365,6 @@ async def generate_stream(html_code: str = Form(...)):
     )
 
 
-<<<<<<< HEAD
 @app.post("/generate-stream-agent")
 async def generate_stream_agent(html_code: str = Form(...)):
     return StreamingResponse(
@@ -454,15 +378,12 @@ async def generate_stream_agent(html_code: str = Form(...)):
     )
 
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 @app.post("/analyze")
 async def analyze(html_code: str = Form(...)):
     analysis = await analyze_html_code(html_code)
     return analysis.dict()
 
 
-<<<<<<< HEAD
 @app.post("/generate-stream-vision")
 async def generate_stream_vision(
     image: UploadFile = File(...),
@@ -500,8 +421,6 @@ async def analyze_url(target_url: str = Form(...)):
     return analysis.dict()
 
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 @app.post("/generate-all")
 async def generate_all(html_code: str = Form(...)):
     try:
@@ -537,29 +456,15 @@ async def generate_all(html_code: str = Form(...)):
 
 @app.get("/health")
 async def health():
-<<<<<<< HEAD
     return {"status": "ok", "ollama": OLLAMA_BASE_URL, "vision_model": VISION_MODEL}
-=======
-    return {"status": "ok", "ollama": OLLAMA_BASE_URL}
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 
 # ── Point d'entrée avec watchfiles configuré ──────────────────────────────────
 # Lance avec : python -m app.main
-<<<<<<< HEAD
-=======
-# (Ne PAS utiliser uvicorn ... --reload directement si vous avez des problèmes
-#  de rechargement ; utilisez plutôt la commande ci-dessous qui exclut reports/)
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 if __name__ == "__main__":
     import uvicorn
 
-<<<<<<< HEAD
-=======
-    # Dossiers à exclure du watcher pour éviter que l'écriture des scripts
-    # de test dans reports/ redémarre le serveur en plein pipeline.
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

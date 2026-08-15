@@ -9,7 +9,6 @@ class UIElement(BaseModel):
     is_link: bool = False
     possible_destination: Optional[str] = None
 
-<<<<<<< HEAD
     # ── Support des menus déroulants / flyout (survol pour révéler) ───────
     # Renseigné par html_parser_service quand cet élément est détecté à
     # l'intérieur d'un sous-menu (ex: <a>Menu</a><ul class="sub">...</ul>).
@@ -45,13 +44,12 @@ class UIElement(BaseModel):
     # scénario dédié plutôt que de le mélanger à la navigation interne.
     is_external: bool = False
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 class UIAnalysisResult(BaseModel):
     elements: List[UIElement]
     raw_description: str
     page_type: Optional[str] = "general"
+    site_title: Optional[str] = None   # titre <title> du HTML source, affiché avant les scénarios (App.jsx)
 
 
 class TestScenario(BaseModel):
@@ -59,7 +57,6 @@ class TestScenario(BaseModel):
     steps: List[str]
     expected_result: str
 
-<<<<<<< HEAD
     # ── Format QA enrichi (objectif + préconditions) ───────────────────────
     # Un scénario "Ouvrir la page -> Cliquer sur X" n'est pas un scénario
     # QA exploitable : il manque l'INTENTION (pourquoi ce test existe) et
@@ -82,8 +79,6 @@ class TestScenario(BaseModel):
     category: Optional[str] = None
     target_labels: List[str] = []
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 class AllScenarios(BaseModel):
     """Contient tous les scénarios générés pour une interface."""
@@ -102,7 +97,6 @@ class ExecutionReport(BaseModel):
     screenshot_path: Optional[str] = None
     error: Optional[str] = None
 
-<<<<<<< HEAD
     # ── Métriques ajoutées pour un rapport "pro" ──────────────────────────
     # Toutes remplies par la ligne RESULT_JSON imprimée en fin de script
     # Selenium généré (voir script_service.BOILERPLATE_FOOTER_TEMPLATE) et
@@ -116,15 +110,9 @@ class ExecutionReport(BaseModel):
     final_url: Optional[str] = None
     page_title: Optional[str] = None
 
-=======
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd
 
 class ScenarioWithScript(BaseModel):
     """Un scénario et son script Selenium associé."""
     scenario: TestScenario
     script: GeneratedScript
-<<<<<<< HEAD
     execution_report: Optional[ExecutionReport] = None
-=======
-    execution_report: Optional[ExecutionReport] = None
->>>>>>> 9187a6f133368f59938ee0cf3b3cb68806004bcd

@@ -1,0 +1,102 @@
+services:
+
+  # ── Ollama : sert les modèles LLM (texte, vision, agent) ───────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: testauto_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"   # optionnel, pratique pour débugger depuis l'hôte
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    # Décommenter si tu as un GPU NVIDIA + nvidia-container-toolkit
+    # installé (accélère énormément l'inférence, surtout llava:7b) :
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ── Init : télécharge les modèles une seule fois puis s'arrête ────────
+  # Sépare le "pull" du service ollama lui-même pour ne bloquer aucun des
+  # deux : ollama démarre et devient healthy indépendamment du temps de
+  # téléchargement des modèles (~5-10 Go au total au premier lancement).
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: testauto_ollama_init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: "ollama:11434"
+      TEXT_MODEL: ${TEXT_MODEL:-llama3.2:1b}
+      VISION_MODEL: ${VISION_MODEL:-llava:7b}
+      AGENT_MODEL: ${AGENT_MODEL:-llama3.1:8b}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Téléchargement des modèles Ollama (peut prendre plusieurs minutes)..." &&
+        ollama pull "$$TEXT_MODEL" &&
+        ollama pull "$$VISION_MODEL" &&
+        ollama pull "$$AGENT_MODEL" &&
+        echo "Modèles prêts."
+    restart: "no"
+
+  # ── Backend FastAPI (+ Selenium + Tesseract) ────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: testauto_backend
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      TEXT_MODEL: ${TEXT_MODEL:-llama3.2:1b}
+      VISION_MODEL: ${VISION_MODEL:-llava:7b}
+      AGENT_MODEL: ${AGENT_MODEL:-llama3.1:8b}
+      TESSERACT_CMD: ""
+      # Réduit par rapport au défaut de config.py (6) : en conteneur, chaque
+      # instance Chrome headless supplémentaire consomme de la RAM sur une
+      # machine potentiellement plus contrainte qu'un poste de dev local.
+      # Ajuste via .env selon les ressources disponibles.
+      EXECUTION_CONCURRENCY: ${EXECUTION_CONCURRENCY:-3}
+      SCENARIO_GEN_CONCURRENCY: ${SCENARIO_GEN_CONCURRENCY:-2}
+    volumes:
+      - ./reports:/app/reports
+      - ./screenshots:/app/screenshots
+      - ./uploads:/app/uploads
+    # Chrome headless a besoin de plus que les 64 Mo de /dev/shm par défaut
+    # de Docker, sinon il peut crasher sur des pages lourdes.
+    shm_size: "2gb"
+    ports:
+      - "8000:8000"
+
+  # ── Frontend React/Vite (build statique servi par nginx) ──────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: testauto_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  ollama_data:
