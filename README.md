@@ -18,26 +18,6 @@ Un LLM local (Ollama) analyse le code, détecte les éléments interactifs, comp
 - **Scripts & exécution** : résolution de chaque étape vers l'élément UI réel (similarité de texte), scripts Selenium avec repli XPath, exécution parallèle isolée (plusieurs Chrome headless), retry auto (déterministe ou piloté par agent LLM)
 - **Rapport** : fichier HTML autonome (screenshots en base64), diagnostic intelligent des échecs + suggestion de correctif, streaming SSE, commence directement sur les scénarios (aucun détail technique en avant)
 
-## Architecture
-
-```
-test-auto/
-├── app/
-│   ├── models/schemas.py
-│   ├── services/              # agents spécialisés du pipeline
-│   ├── config.py
-│   └── main.py                # API + pipeline SSE
-├── frontend/
-│   ├── src/{App.jsx,main.jsx}
-│   └── Dockerfile
-├── reports/                    # runtime
-├── uploads/                    # runtime
-├── screenshots/                 # runtime
-├── Dockerfile
-├── docker-compose.yml
-├── run.py
-└── requirements.txt
-```
 
 ## Pipeline (LangGraph)
 
